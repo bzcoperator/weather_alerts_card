@@ -20,7 +20,7 @@ Where the card gets its alerts. At least one of `entity`, `device`, `devices` or
 | `device` | — | HA `device_id` — auto-discovers all per-alert sensors under that device, and re-discovers as alerts come and go. CAP Alerts and NINA both produce this shape |
 | `devices` | — | Additional device ids, the same shape `entities` gives `entity`. An alert both devices carry is shown once; each device that goes dark is named on its own |
 | `sources` | — | Feed `source` attribute values to auto-collect, e.g. `['nsw_rural_fire_service_feed']` or `['inmet']` |
-| `provider` | auto-detect | `'nws'`, `'bom'`, `'meteoalarm'`, `'dwd'`, `'nina'`, `'meteoswiss'`, `'eccc'`, `'nsw_rfs'`, `'inmet'`, `'pirateweather'`, `'cap'` |
+| `provider` | auto-detect | `'nws'`, `'bom'`, `'meteoalarm'`, `'dwd'`, `'nina'`, `'meteoswiss'`, `'eccc'`, `'nsw_rfs'`, `'inmet'`, `'ipma'`, `'pirateweather'`, `'cap'` |
 
 ### Collecting a whole feed with `sources`
 
