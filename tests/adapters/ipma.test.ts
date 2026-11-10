@@ -91,9 +91,61 @@ describe('IpmaAdapter', () => {
     });
   });
 
+  describe('list form (warnings array)', () => {
+    const item = (over: Record<string, unknown>): Record<string, unknown> => ({
+      text: '',
+      awarenessTypeName: 'Vento',
+      idAreaAviso: 'LSB',
+      startTime: '2026-11-11T12:00:00',
+      awarenessLevelID: 'red',
+      endTime: '2026-11-11T21:00:00',
+      ...over,
+    });
+
+    it('detects a warnings list of IPMA items', () => {
+      expect(adapter.canHandle({ warnings: [item({})] })).toBe(true);
+    });
+
+    it('returns one alert per non-green warning, in order', () => {
+      const alerts = adapter.parseAlerts({
+        warnings: [
+          item({ awarenessTypeName: 'Vento', awarenessLevelID: 'red' }),
+          item({ awarenessTypeName: 'Chuva', awarenessLevelID: 'orange' }),
+          item({ awarenessTypeName: 'Nevoeiro', awarenessLevelID: 'green' }),
+          item({ awarenessTypeName: 'Trovoada', awarenessLevelID: 'yellow' }),
+        ],
+      });
+      expect(alerts.map(a => a.event)).toEqual(['Wind', 'Rain', 'Thunderstorm']);
+      expect(alerts.map(a => a.severity)).toEqual(['extreme', 'severe', 'moderate']);
+    });
+
+    it('gives each alert its own id', () => {
+      const alerts = adapter.parseAlerts({
+        warnings: [
+          item({ awarenessTypeName: 'Agitação Marítima', awarenessLevelID: 'orange' }),
+          item({ awarenessTypeName: 'Agitação Marítima', awarenessLevelID: 'yellow', startTime: '2026-11-10T07:19:00' }),
+        ],
+      });
+      expect(new Set(alerts.map(a => a.id)).size).toBe(2);
+    });
+
+    it('returns nothing when every warning is green', () => {
+      expect(adapter.parseAlerts({ warnings: [item({ awarenessLevelID: 'green' })] })).toEqual([]);
+    });
+
+    it('does not claim a BoM-shaped warnings array', () => {
+      const bom = { warnings: [{ warning_group_type: 'major', issue_time: '2026-03-06T10:00:00Z' }] };
+      expect(adapter.canHandle(bom)).toBe(false);
+    });
+  });
+
   describe('registry', () => {
     it('is selected by explicit provider for an idle sensor', () => {
       expect(getAdapter('ipma', { friendly_name: 'Oeiras Weather Alert' }).provider).toBe('ipma');
+    });
+
+    it('is auto-detected from a warnings list', () => {
+      expect(getAdapter(undefined, { warnings: [{ awarenessLevelID: 'red', awarenessTypeName: 'Vento', idAreaAviso: 'LSB' }] }).provider).toBe('ipma');
     });
 
     it('is auto-detected from the captured payload', () => {

@@ -1,11 +1,14 @@
 import { AlertAdapter, AlertProvider, AlertSeverity, WeatherAlert } from '../types';
 import { parseTimestamp } from '../utils';
 
-// IPMA (Instituto Português do Mar e da Atmosfera, Portugal) via the HA core
-// `ipma` integration's `weather_alert` sensor. Its state is the awareness
-// colour; its attributes are the raw IPMA warning fields. The core sensor
-// reports only the first active warning (`warnings[0]`), so one entity is one
-// alert. Upstream text is Portuguese; the event name is translated here.
+// IPMA (Instituto Português do Mar e da Atmosfera, Portugal). Two shapes:
+//
+// - a list: `attributes.warnings`, one raw IPMA warning per item (the NWS
+//   pattern). Every non-green warning becomes an alert.
+// - a single warning as flat attributes, which is what the HA core `ipma`
+//   `weather_alert` sensor exposes today (it reports only the first warning).
+//
+// IPMA publishes no `sent`, `certainty` or `urgency`, so those stay empty.
 
 const AWARENESS_SEVERITY: Record<string, AlertSeverity> = {
   green: 'minor',
@@ -14,18 +17,21 @@ const AWARENESS_SEVERITY: Record<string, AlertSeverity> = {
   red: 'extreme',
 };
 
-// Keys are IPMA `awarenessTypeName` values as the API publishes them.
-// Unmapped types fall through untranslated rather than being guessed.
+// Keys are IPMA `awarenessTypeName` values. Unmapped types pass through.
 const TYPE_NAMES_EN: Record<string, string> = {
   'Vento': 'Wind',
   'Chuva': 'Rain',
+  'Precipitação': 'Precipitation',
   'Neve': 'Snow',
   'Trovoada': 'Thunderstorm',
   'Nevoeiro': 'Fog',
   'Calor': 'Heat',
   'Frio': 'Cold',
+  'Agitação Marítima': 'Coastal swell',
   'Agitação marítima': 'Coastal swell',
+  'Tempo Quente': 'Hot weather',
   'Tempo quente': 'Hot weather',
+  'Tempo Frio': 'Cold weather',
   'Tempo frio': 'Cold weather',
 };
 
@@ -36,57 +42,85 @@ const LEVEL_LABELS: Record<string, string> = {
   red: 'Extreme',
 };
 
+type Raw = Record<string, unknown>;
+
 export class IpmaAdapter implements AlertAdapter {
   provider: AlertProvider = 'ipma';
 
-  // Each entity is a single warning with no CAP `id`, so the id is synthesised
-  // from area, type and start time. It is not stable across providers.
+  // Ids are synthesised from area, type and start time, so they are not stable
+  // across providers.
   stableIds = false;
 
-  // Detection needs all three keys. An idle sensor publishes no warning
-  // attributes, so it is not auto-detected: set `provider: ipma` for it.
   canHandle(attributes: Record<string, unknown>): boolean {
-    return typeof attributes['awarenessLevelID'] === 'string'
-      && typeof attributes['awarenessTypeName'] === 'string'
-      && typeof attributes['idAreaAviso'] === 'string';
+    if (isSingle(attributes)) return true;
+    const list = attributes['warnings'];
+    return Array.isArray(list) && list.some(isWarning);
   }
 
   parseAlerts(attributes: Record<string, unknown>): WeatherAlert[] {
-    const level = str(attributes['awarenessLevelID']).toLowerCase();
-    const typeRaw = str(attributes['awarenessTypeName']);
-    const area = str(attributes['idAreaAviso']);
-    if (!level || !typeRaw) return [];
-
-    const severity = AWARENESS_SEVERITY[level] ?? 'unknown';
-    const event = TYPE_NAMES_EN[typeRaw] ?? typeRaw;
-    const onsetTs = parseTimestamp(str(attributes['startTime']));
-    const endsTs = parseTimestamp(str(attributes['endTime']));
-    const text = str(attributes['text']);
-
-    return [{
-      id: `ipma_${area}_${typeRaw}_${onsetTs}`,
-      event,
-      severity,
-      severityLabel: LEVEL_LABELS[level] ?? '',
-      certainty: '',
-      urgency: '',
-      sentTs: 0,
-      onsetTs,
-      endsTs,
-      description: text,
-      instruction: '',
-      url: '',
-      headline: event,
-      areaDesc: '',
-      zones: area ? [area.toUpperCase()] : [],
-      eventCode: '',
-      provider: 'ipma',
-      iconHint: typeRaw,
-      phase: '',
-      severityInferred: AWARENESS_SEVERITY[level] === undefined,
-      certaintyInferred: false,
-    }];
+    const list = attributes['warnings'];
+    if (Array.isArray(list) && list.some(isWarning)) {
+      return list
+        .filter(isWarning)
+        .filter(w => str(w['awarenessLevelID']).toLowerCase() !== 'green')
+        .map(toAlert)
+        .filter((a): a is WeatherAlert => a !== undefined);
+    }
+    if (isSingle(attributes)) {
+      const alert = toAlert(attributes);
+      return alert ? [alert] : [];
+    }
+    return [];
   }
+}
+
+// Single-warning form: the three detection keys must all be present.
+function isSingle(a: Raw): boolean {
+  return typeof a['awarenessLevelID'] === 'string'
+    && typeof a['awarenessTypeName'] === 'string'
+    && typeof a['idAreaAviso'] === 'string';
+}
+
+// A list item is an IPMA warning if it carries the level and type keys.
+function isWarning(v: unknown): v is Raw {
+  return !!v && typeof v === 'object'
+    && typeof (v as Raw)['awarenessLevelID'] === 'string'
+    && typeof (v as Raw)['awarenessTypeName'] === 'string';
+}
+
+function toAlert(w: Raw): WeatherAlert | undefined {
+  const level = str(w['awarenessLevelID']).toLowerCase();
+  const typeRaw = str(w['awarenessTypeName']);
+  const area = str(w['idAreaAviso']);
+  if (!level || !typeRaw) return undefined;
+
+  const onsetTs = parseTimestamp(str(w['startTime']));
+  const endsTs = parseTimestamp(str(w['endTime']));
+  const event = TYPE_NAMES_EN[typeRaw] ?? typeRaw;
+
+  return {
+    id: `ipma_${area}_${typeRaw}_${level}_${onsetTs}`,
+    event,
+    severity: AWARENESS_SEVERITY[level] ?? 'unknown',
+    severityLabel: LEVEL_LABELS[level] ?? '',
+    certainty: '',
+    urgency: '',
+    sentTs: 0,
+    onsetTs,
+    endsTs,
+    description: str(w['text']),
+    instruction: '',
+    url: '',
+    headline: event,
+    areaDesc: '',
+    zones: area ? [area.toUpperCase()] : [],
+    eventCode: '',
+    provider: 'ipma',
+    iconHint: typeRaw,
+    phase: '',
+    severityInferred: AWARENESS_SEVERITY[level] === undefined,
+    certaintyInferred: false,
+  };
 }
 
 function str(v: unknown): string {
