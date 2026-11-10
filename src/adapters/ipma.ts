@@ -29,10 +29,10 @@ const TYPE_NAMES_EN: Record<string, string> = {
   'Frio': 'Cold',
   'Agitação Marítima': 'Coastal swell',
   'Agitação marítima': 'Coastal swell',
-  'Tempo Quente': 'Hot weather',
-  'Tempo quente': 'Hot weather',
-  'Tempo Frio': 'Cold weather',
-  'Tempo frio': 'Cold weather',
+  'Tempo Quente': 'Heat',
+  'Tempo quente': 'Heat',
+  'Tempo Frio': 'Cold',
+  'Tempo frio': 'Cold',
 };
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -116,7 +116,7 @@ function toAlert(w: Raw): WeatherAlert | undefined {
     zones: area ? [area.toUpperCase()] : [],
     eventCode: '',
     provider: 'ipma',
-    iconHint: typeRaw,
+    iconHint: event,
     phase: '',
     severityInferred: AWARENESS_SEVERITY[level] === undefined,
     certaintyInferred: false,

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { IpmaAdapter } from '../../src/adapters/ipma';
 import { getAdapter } from '../../src/adapters';
-import { parseTimestamp } from '../../src/utils';
+import { getWeatherIcon, parseTimestamp } from '../../src/utils';
 
 // Captured from sensor.oeiras_weather_alert (HA core ipma weather_alert sensor),
 // Lisboa district, live response during the 2026-11-10 wind warning.
@@ -136,6 +136,28 @@ describe('IpmaAdapter', () => {
     it('does not claim a BoM-shaped warnings array', () => {
       const bom = { warnings: [{ warning_group_type: 'major', issue_time: '2026-03-06T10:00:00Z' }] };
       expect(adapter.canHandle(bom)).toBe(false);
+    });
+  });
+
+  describe('icons', () => {
+    it('gives each IPMA type a specific icon, not the generic fallback', () => {
+      const cases: [string, string][] = [
+        ['Vento', 'mdi:weather-windy'],
+        ['Chuva', 'mdi:weather-pouring'],
+        ['Precipitação', 'mdi:weather-pouring'],
+        ['Neve', 'mdi:weather-snowy-heavy'],
+        ['Trovoada', 'mdi:weather-lightning'],
+        ['Nevoeiro', 'mdi:weather-fog'],
+        ['Calor', 'mdi:weather-sunny-alert'],
+        ['Frio', 'mdi:thermometer-low'],
+        ['Agitação Marítima', 'mdi:waves'],
+        ['Tempo Quente', 'mdi:weather-sunny-alert'],
+        ['Tempo Frio', 'mdi:thermometer-low'],
+      ];
+      for (const [type, icon] of cases) {
+        const [alert] = adapter.parseAlerts({ warnings: [{ ...capturedWind(), awarenessTypeName: type }] });
+        expect(getWeatherIcon(alert.iconHint || alert.event)).toBe(icon);
+      }
     });
   });
 
