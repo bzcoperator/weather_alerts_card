@@ -244,6 +244,26 @@ type: custom:weather-alerts-card
 entity: sensor.pirateweather_alerts
 ```
 
+### IPMA (Portugal)
+
+Uses the HA core [`ipma`](https://www.home-assistant.io/integrations/ipma/) integration's
+`weather_alert` sensor. Each entity carries one warning (the core sensor reports only the
+first active one). Detected from `awarenessLevelID`, `awarenessTypeName` and `idAreaAviso`.
+An idle sensor has none of these, so set `provider: ipma` explicitly for it.
+
+```yaml
+type: custom:weather-alerts-card
+entity: sensor.oeiras_weather_alert
+provider: ipma
+```
+
+**Fidelity.** Severity comes from the awareness colour (`green` minor, `yellow` moderate,
+`orange` severe, `red` extreme). Event names are translated from the common Portuguese types
+(Vento, Chuva, Neve, Trovoada, Nevoeiro, Calor, Frio, Agitação marítima); other types are shown
+as published. The description is IPMA's Portuguese text, untranslated. Certainty, urgency and
+issue time are not published, so they are empty. The card's zone filter matches the IPMA district
+code (`idAreaAviso`, e.g. `LSB`). Timestamps are read in the browser's time zone.
+
 ### CAP Alerts (multi-region)
 
 The [CAP Alerts integration](https://github.com/seevee/cap_alerts) creates **one sensor
