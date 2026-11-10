@@ -355,6 +355,7 @@ export interface GeometryMap {
   aspect: string;            // "w / h" for CSS aspect-ratio (no letterbox bars)
   tiles: MercatorTile[];
   shapePath: string;         // every outer ring as one path, '' when there is no geometry
+  framePath: string;         // the unpadded bbox as a closed rectangle, in tile space
   attribution: string;
   marker?: GeometryMarker;          // the incident (`point`), in tile space
   referenceMarker?: GeometryMarker; // the user's reference point, in tile space
@@ -454,11 +455,15 @@ export function buildGeometryMap(
     const [px, py] = worldPx(lon, lat, z);
     return [px - ox, py - oyN];
   };
+  const [fx0, fy0] = project(rminlon, rmaxlat);
+  const [fx1, fy1] = project(rmaxlon, rminlat);
+  const framePath = `M${fmt(fx0)} ${fmt(fy0)}H${fmt(fx1)}V${fmt(fy1)}H${fmt(fx0)}Z`;
   return {
     viewBox,
     aspect,
     tiles,
     shapePath: shapePath(geometry, project),
+    framePath,
     attribution,
     ...(opts?.point && { marker: projectMarker(opts.point, project) }),
     ...(opts?.referencePoint && { referenceMarker: projectMarker(opts.referencePoint, project) }),

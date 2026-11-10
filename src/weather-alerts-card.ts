@@ -2311,7 +2311,7 @@ export class WeatherAlertsCard extends LitElement {
     const attribution = this._config?.geometryTileAttribution
       ?? (override ? '© OpenStreetMap' : DEFAULT_TILE_ATTRIBUTION);
     const invert = !override && this._themeMode === 'dark';
-    const { viewBox, aspect, tiles, shapePath, marker, referenceMarker } = buildGeometryMap(
+    const { viewBox, aspect, tiles, shapePath, framePath, marker, referenceMarker } = buildGeometryMap(
       bbox,
       geometry,
       { tileUrl, attribution, point, referencePoint },
@@ -2335,7 +2335,7 @@ export class WeatherAlertsCard extends LitElement {
               height=${tile.size}
             ></image>`)}
           </g>
-          <rect class="geometry-frame" x="0" y="0" width="100%" height="100%"></rect>
+          <path class="geometry-frame" d=${framePath}></path>
           ${this._renderGeometryShape(alert, viewBox, shapePath, true)}
           ${this._renderGeometryMarkers(marker, referenceMarker, true)}
         </svg>
