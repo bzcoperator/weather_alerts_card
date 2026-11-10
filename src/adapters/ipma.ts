@@ -1,5 +1,6 @@
 import { AlertAdapter, AlertProvider, AlertSeverity, WeatherAlert } from '../types';
 import { parseTimestamp } from '../utils';
+import { IPMA_DISTRICT_GEOMETRY } from './ipma-districts';
 
 // IPMA (Instituto Português do Mar e da Atmosfera, Portugal). Two shapes:
 //
@@ -169,6 +170,7 @@ function toAlert(w: Raw): WeatherAlert | undefined {
     iconHint: event,
     phase: '',
     ...(bbox && { bbox }),
+    ...(IPMA_DISTRICT_GEOMETRY[code] && { geometry: IPMA_DISTRICT_GEOMETRY[code] }),
     severityInferred: AWARENESS_SEVERITY[level] === undefined,
     certaintyInferred: false,
   };

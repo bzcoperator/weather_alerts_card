@@ -2207,7 +2207,8 @@ export class WeatherAlertsCard extends LitElement {
     if (this._config?.showGeometry !== true) return nothing;
     const { bbox, point, referencePoint } = this._geometryPoints(alert);
     if (!bbox) return nothing;
-    const geometry = alert.geometryRef ? this._geometryCache.get(alert.geometryRef) : undefined;
+    const geometry = alert.geometry
+      ?? (alert.geometryRef ? this._geometryCache.get(alert.geometryRef) : undefined);
     if (this._config?.geometryStyle === 'map') {
       // Default basemap needs the proxy token. Until it arrives — or for good
       // on a core without map_tiles — the plain outline is the honest render:
