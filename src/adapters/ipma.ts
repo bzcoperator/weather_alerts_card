@@ -35,6 +35,24 @@ const TYPE_NAMES_EN: Record<string, string> = {
   'Tempo frio': 'Cold',
 };
 
+// District codes (`idAreaAviso`) to names. Unknown codes fall back to the code.
+const AREA_NAMES: Record<string, string> = {
+  AVR: 'Aveiro',
+  BGC: 'Bragança',
+  BJA: 'Beja',
+  BRG: 'Braga',
+  CBR: 'Coimbra',
+  EVR: 'Évora',
+  FAR: 'Faro',
+  GDA: 'Guarda',
+  LRA: 'Leiria',
+  LSB: 'Lisboa',
+  PTO: 'Porto',
+  VCT: 'Viana do Castelo',
+  VIS: 'Viseu',
+  VRL: 'Vila Real',
+};
+
 const LEVEL_LABELS: Record<string, string> = {
   green: 'Minor',
   yellow: 'Moderate',
@@ -110,9 +128,10 @@ function toAlert(w: Raw): WeatherAlert | undefined {
     endsTs,
     description: str(w['text']),
     instruction: '',
-    url: '',
+    // IPMA publishes no per-warning page; link the area's forecast page.
+    url: area ? `https://www.ipma.pt/pt/otempo/prev-sam/?p=${area.toUpperCase()}` : '',
     headline: event,
-    areaDesc: '',
+    areaDesc: AREA_NAMES[area.toUpperCase()] ?? area.toUpperCase(),
     zones: area ? [area.toUpperCase()] : [],
     eventCode: '',
     provider: 'ipma',

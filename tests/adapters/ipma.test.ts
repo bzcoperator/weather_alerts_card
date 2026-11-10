@@ -49,6 +49,8 @@ describe('IpmaAdapter', () => {
       expect(alert.severityLabel).toBe('Extreme');
       expect(alert.description).toBe('Rajadas até 120 km/h, podendo atingir 140 km/h nos locais mais expostos.');
       expect(alert.zones).toEqual(['LSB']);
+      expect(alert.areaDesc).toBe('Lisboa');
+      expect(alert.url).toBe('https://www.ipma.pt/pt/otempo/prev-sam/?p=LSB');
       expect(alert.severityInferred).toBe(false);
     });
 
