@@ -41,16 +41,45 @@ const AREA_NAMES: Record<string, string> = {
   BGC: 'Bragança',
   BJA: 'Beja',
   BRG: 'Braga',
+  CBO: 'Castelo Branco',
   CBR: 'Coimbra',
   EVR: 'Évora',
   FAR: 'Faro',
   GDA: 'Guarda',
   LRA: 'Leiria',
   LSB: 'Lisboa',
+  PTG: 'Portalegre',
   PTO: 'Porto',
+  SNT: 'Santarém',
+  STB: 'Setúbal',
   VCT: 'Viana do Castelo',
   VIS: 'Viseu',
   VRL: 'Vila Real',
+};
+
+// District bounding boxes [minlon, minlat, maxlon, maxlat], derived from the
+// georef-portugal-distrito 2021 boundaries (joaohumbg1/portugal_geojsons).
+// Drives the mini-map frame; no polygon. Islands have no entry.
+// CBO, PTG, SNT and STB codes are not yet confirmed against a live IPMA warning.
+const DISTRICT_BBOX: Record<string, [number, number, number, number]> = {
+  AVR: [-8.784, 40.279, -8.089, 41.080],
+  BGC: [-7.432, 41.025, -6.189, 41.993],
+  BJA: [-8.820, 37.319, -6.931, 38.331],
+  BRG: [-8.812, 41.319, -7.811, 41.821],
+  CBO: [-8.293, 39.537, -6.864, 40.416],
+  CBR: [-8.909, 39.924, -7.732, 40.520],
+  EVR: [-8.658, 38.155, -7.107, 39.027],
+  FAR: [-8.997, 36.962, -7.393, 37.529],
+  GDA: [-7.849, 40.230, -6.781, 41.179],
+  LRA: [-9.517, 39.212, -8.108, 40.090],
+  LSB: [-9.501, 38.673, -8.782, 39.318],
+  PTG: [-8.344, 38.751, -6.951, 39.664],
+  PTO: [-8.789, 41.001, -7.876, 41.472],
+  SNT: [-9.002, 38.731, -7.809, 39.839],
+  STB: [-9.263, 37.749, -8.130, 38.845],
+  VCT: [-8.881, 41.606, -8.083, 42.154],
+  VIS: [-8.359, 40.323, -7.305, 41.215],
+  VRL: [-8.119, 41.119, -7.171, 41.927],
 };
 
 const LEVEL_LABELS: Record<string, string> = {
@@ -115,6 +144,8 @@ function toAlert(w: Raw): WeatherAlert | undefined {
   const onsetTs = parseTimestamp(str(w['startTime']));
   const endsTs = parseTimestamp(str(w['endTime']));
   const event = TYPE_NAMES_EN[typeRaw] ?? typeRaw;
+  const code = area.toUpperCase();
+  const bbox = DISTRICT_BBOX[code];
 
   return {
     id: `ipma_${area}_${typeRaw}_${level}_${onsetTs}`,
@@ -129,14 +160,15 @@ function toAlert(w: Raw): WeatherAlert | undefined {
     description: str(w['text']),
     instruction: '',
     // IPMA publishes no per-warning page; link the area's forecast page.
-    url: area ? `https://www.ipma.pt/pt/otempo/prev-sam/?p=${area.toUpperCase()}` : '',
+    url: area ? `https://www.ipma.pt/pt/otempo/prev-sam/?p=${code}` : '',
     headline: event,
-    areaDesc: AREA_NAMES[area.toUpperCase()] ?? area.toUpperCase(),
-    zones: area ? [area.toUpperCase()] : [],
+    areaDesc: AREA_NAMES[code] ?? code,
+    zones: area ? [code] : [],
     eventCode: '',
     provider: 'ipma',
     iconHint: event,
     phase: '',
+    ...(bbox && { bbox }),
     severityInferred: AWARENESS_SEVERITY[level] === undefined,
     certaintyInferred: false,
   };

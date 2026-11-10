@@ -51,6 +51,7 @@ describe('IpmaAdapter', () => {
       expect(alert.zones).toEqual(['LSB']);
       expect(alert.areaDesc).toBe('Lisboa');
       expect(alert.url).toBe('https://www.ipma.pt/pt/otempo/prev-sam/?p=LSB');
+      expect(alert.bbox).toEqual([-9.501, 38.673, -8.782, 39.318]);
       expect(alert.severityInferred).toBe(false);
     });
 
